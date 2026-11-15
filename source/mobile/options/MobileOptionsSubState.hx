@@ -40,6 +40,10 @@ class MobileOptionsSubState extends BaseOptionsMenu
 		addOption(option);
 		#end
 
+		option = new Option('Touch Indicator',
+			'If checked, a ring is shown under every finger (or mouse click) so you can see where you are touching.', 'touchIndicator', BOOL);
+		addOption(option);
+
 		#if mobile
 		option = new Option('Allow Phone Screensaver',
 			'If checked, the phone will sleep after going inactive for few seconds.\n(The time depends on your phone\'s options)', 'screensaver', BOOL);
