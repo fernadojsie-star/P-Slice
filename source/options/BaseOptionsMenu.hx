@@ -80,6 +80,15 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		descText.borderSize = 2.4;
 		add(descText);
 
+		#if TOUCH_CONTROLS_ALLOWED
+		var backButton = new mobile.objects.VSliceBackButton(35, 35, () ->
+		{
+			close();
+			FlxG.sound.play(Paths.sound('cancelMenu'));
+		});
+		add(backButton);
+		#end
+
 		var cutoutSize = MobileScaleMode.gameCutoutSize.x / 2;
 		for (i in 0...optionsArray.length)
 		{
@@ -117,9 +126,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		reloadCheckboxes();
 
 		#if TOUCH_CONTROLS_ALLOWED
-		addTouchPad('LEFT_FULL', 'A_B_C');
-
-		var button = new TouchZone(85, 300, 1070, 100, FlxColor.PURPLE);
+		var button = new TouchZone(85, 300, 1070, 100, FlxColor.TRANSPARENT);
 
 		var scroll = new ScrollableObject(-0.008, 100, 0, FlxG.width - 200, FlxG.height, button);
 		scroll.onPartialScroll.add(delta -> changeSelection(delta, false));
@@ -132,7 +139,13 @@ class BaseOptionsMenu extends MusicBeatSubstate
 			onAcceptPress();
 		});
 		add(scroll);
-		add(button);
+
+		var backTouch = new mobile.objects.VSliceBackButton(35, FlxG.height - 155, () ->
+		{
+			FlxG.sound.play(Paths.sound('cancelMenu'));
+			close();
+		});
+		add(backTouch);
 		#end
 	}
 
@@ -276,7 +289,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 					}
 			}
 
-			if (controls.RESET #if TOUCH_CONTROLS_ALLOWED || touchPad.buttonC.justPressed #end)
+			if (controls.RESET)
 			{
 				var leOption:Option = optionsArray[curSelected];
 				if (leOption.type != KEYBIND)
@@ -347,7 +360,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 
 	function bindingKeyUpdate(elapsed:Float)
 	{
-		if (#if TOUCH_CONTROLS_ALLOWED touchPad.buttonB.pressed || #end FlxG.keys.pressed.ESCAPE || FlxG.gamepads.anyPressed(B))
+		if (FlxG.keys.pressed.ESCAPE || FlxG.gamepads.anyPressed(B))
 		{
 			holdingEsc += elapsed;
 			if (holdingEsc > 0.5)
@@ -356,7 +369,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 				closeBinding();
 			}
 		}
-		else if (#if TOUCH_CONTROLS_ALLOWED touchPad.buttonC.pressed || #end FlxG.keys.pressed.BACKSPACE || FlxG.gamepads.anyPressed(BACK))
+		else if (FlxG.keys.pressed.BACKSPACE || FlxG.gamepads.anyPressed(BACK))
 		{
 			holdingEsc += elapsed;
 			if (holdingEsc > 0.5)
