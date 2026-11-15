@@ -69,32 +69,12 @@ class MobileMenuState extends FlxBasic {
 				FlxG.mouse.visible = true;
 			});
 		}).selectedOffset.set(10,20);
-		#if MODS_ALLOWED
-		grid.makeButton('mods', 0, () ->
-		{
-			FlxG.mouse.visible = false;
-			MusicBeatState.switchState(new ModsMenuState());
-		});
-		#end
-		#if ACHIEVEMENTS_ALLOWED
-		grid.makeButton('awards', 1, () ->
-		{
-			FlxG.mouse.visible = false;
-			MusicBeatState.switchState(new AchievementsMenuState());
-		}).selectedOffset.set(70,15);
-		#end
 
 		grid.makeButton('credits', 1, () ->
 		{
 			FlxG.mouse.visible = false;
 			MusicBeatState.switchState(new CreditsState());
 		}).selectedOffset.set(150,10);
-
-		#if !switch
-		var donateBtn = new GridTileDonate(grid);
-		grid.addButton(donateBtn, 1);
-		donateBtn.selectedOffset.set(30,0);
-		#end
 
 		var optionsBtn = new OptionsButton(grid,() ->
 		{
