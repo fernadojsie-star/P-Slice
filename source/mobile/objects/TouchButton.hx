@@ -7,7 +7,7 @@ import flixel.input.FlxInput;
 import flixel.input.FlxPointer;
 import flixel.input.IFlxInput;
 import flixel.util.FlxDestroyUtil.IFlxDestroyable;
-#if desktop
+#if (desktop || html5)
 import flixel.input.mouse.FlxMouseButton;
 #end
 
@@ -288,14 +288,18 @@ class TypedTouchButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 
 		for (camera in cameras)
 		{
-			#if desktop
+			// Desktop & browser builds can be driven by a mouse, browser & mobile builds by touches
+			// (a browser can be either one, so it checks both).
+			#if (desktop || html5)
 			var button = FlxMouseButton.getByID(FlxMouseButtonID.LEFT);
 			if (checkInput(FlxG.mouse, button, button.justPressedPosition, camera))
-			#else
+				overlap = true;
+			#end
+			#if !desktop
 			for (touch in FlxG.touches.list)
 				if (checkInput(touch, touch, touch.justPressedPosition, camera))
+					overlap = true;
 			#end
-			overlap = true;
 		}
 
 		return overlap;
