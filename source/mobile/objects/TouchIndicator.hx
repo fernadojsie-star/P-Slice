@@ -155,5 +155,5 @@ private class Mark
 		display = circle;
 		display.mouseEnabled = false;
 	}
-}}
+}
 #end
