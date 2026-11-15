@@ -99,6 +99,18 @@ class MobileScaleMode extends BaseScaleMode
   private static var cutoutBitmaps:Array<Bitmap> = [null, null];
 
   /**
+   * Logical size (`FlxG.width` / `FlxG.height`) the current state was built with.
+   *
+   * Sprites are positioned using `FlxG.width` when a state is created, so changing it while the state is
+   * alive (entering/leaving fullscreen, resizing the browser window, toggling Wide Screen) leaves characters,
+   * menus and cameras in the wrong place. While this is > 0 any resize only rescales and centers the game
+   * (letterbox) and the new size is applied on the next state switch instead.
+   */
+  private static var lockedWidth:Int = 0;
+  private static var lockedHeight:Int = 0;
+  private static var signalsHooked:Bool = false;
+
+  /**
    * Constructor for `FullScreenScaleMode`.
    *
    * @param enable Whether fullscreen scaling should be enabled by default.
@@ -108,6 +120,15 @@ class MobileScaleMode extends BaseScaleMode
     super();
 
     instance = this;
+    lockedWidth = 0;
+    lockedHeight = 0;
+
+    if (!signalsHooked)
+    {
+      signalsHooked = true;
+      FlxG.signals.preStateSwitch.add(onPreStateSwitch);
+      FlxG.signals.postStateSwitch.add(onPostStateSwitch);
+    }
 
     // Required so we can check on which axies is the game wide.
     if (FlxG.stage != null) updateGameSize(FlxG.stage.stageWidth, FlxG.stage.stageHeight);
@@ -122,10 +143,18 @@ class MobileScaleMode extends BaseScaleMode
    */
   override public function onMeasure(Width:Int, Height:Int):Void
   {
+    if (lockedWidth > 0)
+    {
+      measureLocked(Width, Height);
+      return;
+    }
+
     untyped FlxG.width = FlxG.initialWidth;
     untyped FlxG.height = FlxG.initialHeight;
 
     updateGameSize(Width, Height);
+    horizontalAlign = active ? LEFT : CENTER;
+    verticalAlign = active ? TOP : CENTER;
     updateDeviceSize(Width, Height);
     updateDeviceCutout(Width, Height);
     #if mobile
@@ -135,6 +164,66 @@ class MobileScaleMode extends BaseScaleMode
     updateGamePosition();
 
     adjustGameSize();
+  }
+
+  /**
+   * Resize that keeps the logical size of the running state untouched.
+   * The game is scaled uniformly to fit the window and centered, so nothing moves relative to the rest.
+   * Cutout / notch values are intentionally left as they were when the state was created.
+   */
+  private function measureLocked(Width:Int, Height:Int):Void
+  {
+    untyped FlxG.width = lockedWidth;
+    untyped FlxG.height = lockedHeight;
+
+    gameRatio = FlxG.width / FlxG.height;
+    screenRatio = Width / Height;
+    ratioAxis = screenRatio < gameRatio ? FlxAxes.Y : FlxAxes.X;
+    active = false;
+
+    logicalSize.set(Width, Height);
+    if (ratioAxis == FlxAxes.Y)
+    {
+      gameSize.x = Width;
+      logicalSize.y = Math.ceil(gameSize.x / gameRatio);
+      gameSize.y = logicalSize.y;
+    }
+    else
+    {
+      gameSize.y = Height;
+      logicalSize.x = Math.ceil(gameSize.y * gameRatio);
+      gameSize.x = logicalSize.x;
+    }
+
+    updateDeviceSize(Width, Height);
+    horizontalAlign = CENTER;
+    verticalAlign = CENTER;
+    updateScaleOffset();
+    updateGamePosition();
+  }
+
+  /**
+   * A new state is about to be created: from now on it may use the real window size again.
+   */
+  private static function onPreStateSwitch():Void
+  {
+    if (instance == null || lockedWidth <= 0)
+      return;
+
+    lockedWidth = 0;
+    lockedHeight = 0;
+
+    instance.onMeasure(FlxG.stage.stageWidth, FlxG.stage.stageHeight);
+    FlxG.signals.gameResized.dispatch(FlxG.stage.stageWidth, FlxG.stage.stageHeight);
+  }
+
+  /**
+   * The new state has been built with the current logical size, so keep it until the next switch.
+   */
+  private static function onPostStateSwitch():Void
+  {
+    lockedWidth = FlxG.width;
+    lockedHeight = FlxG.height;
   }
 
   /**
