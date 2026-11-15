@@ -20,7 +20,6 @@ class OptionsState extends MusicBeatState
 		#if (TOUCH_CONTROLS_ALLOWED || mobile)'Mobile Options' #end
 	];
 	private var grpOptions:FlxTypedGroup<Alphabet>;
-	private var titleText:Alphabet;
 	private static var curSelected:Int = 0;
 	private static var curSelectedPartial:Float = 0;
 	public static var menuBG:FlxSprite;
@@ -31,10 +30,6 @@ class OptionsState extends MusicBeatState
 	public static var funnyCam:FlxCamera;
 	private var camFollow:FlxObject;
 	private var camFollowPos:FlxObject;
-
-	static inline var LIST_START_Y:Float = 200;
-	static inline var LIST_SPACING:Float = 92;
-	static inline var TITLE_Y:Float = 95;
 
 	function openSelectedSubstate(label:String) {
 		if (label != "Adjust Delay and Combo")
@@ -95,12 +90,27 @@ class OptionsState extends MusicBeatState
 
 		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
 		bg.antialiasing = ClientPrefs.data.antialiasing;
-		bg.color = 0xFFB45A8C;
+		bg.color = 0xFFea71fd;
 		bg.setGraphicSize(Std.int(bg.width * 1.175));
 		bg.updateHitbox();
 
 		bg.screenCenter();
 		add(bg);
+
+		#if TOUCH_CONTROLS_ALLOWED
+		var backButton = new mobile.objects.VSliceBackButton(35, 35, () ->
+		{
+			if (onPlayState)
+			{
+				StageData.loadDirectory(PlayState.SONG);
+				LoadingState.loadAndSwitchState(new PlayState());
+				FlxG.sound.music.volume = 0;
+			}
+			else
+				MusicBeatState.switchState(new MainMenuState());
+		});
+		add(backButton);
+		#end
 
 		grpOptions = new FlxTypedGroup<Alphabet>();
 		add(grpOptions);
@@ -108,37 +118,43 @@ class OptionsState extends MusicBeatState
 		for (num => option in options)
 		{
 			var optionText:Alphabet = new Alphabet(0, 0, Language.getPhrase('options_$option', option), true);
-			optionText.screenCenter(X);
+			optionText.screenCenter();
 			optionText.x -= MobileScaleMode.gameCutoutSize.x / 2;
-			optionText.y = LIST_START_Y + (LIST_SPACING * num);
+			optionText.y += (92 * (num - (options.length / 2))) + 45;
 			optionText.cameras = [funnyCam];
 			grpOptions.add(optionText);
 		}
 
-		titleText = new Alphabet(0, TITLE_Y, Language.getPhrase('options_title', 'Preferences'), true);
-		titleText.screenCenter(X);
-		titleText.x -= MobileScaleMode.gameCutoutSize.x / 2;
-		titleText.alpha = 1;
-		titleText.cameras = [funnyCam];
-		add(titleText);
-
 		changeSelection(0,true);
-		camFollowPos.setPosition(635, camFollow.y);
 		ClientPrefs.saveSettings();
 
 		#if TOUCH_CONTROLS_ALLOWED
-		addTouchPad('UP_DOWN', 'A_B');
-
 		var button = new TouchZone(90,270,FlxG.width,100,FlxColor.PURPLE);
 		
 		var scroll = new ScrollableObject(-0.01,100,0,FlxG.width-200,FlxG.height,button);
 		scroll.onPartialScroll.add(delta -> changeSelection(delta,false));
-		scroll.onFullScrollSnap.add(() ->changeSelection(0,true));
+		// scroll.onFullScroll.add(delta -> {
+		// 	FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
+		// });
+        scroll.onFullScrollSnap.add(() ->changeSelection(0,true));
 		scroll.onTap.add(() ->{
 			openSelectedSubstate(options[curSelected]);
 		});
 		add(scroll);
-		add(button);
+
+		var backTouch = new mobile.objects.VSliceBackButton(35, FlxG.height - 155, () ->
+		{
+			FlxG.sound.play(Paths.sound('cancelMenu'));
+			exiting = true;
+			if(onPlayState)
+			{
+				StageData.loadDirectory(PlayState.SONG);
+				LoadingState.loadAndSwitchState(new PlayState());
+				FlxG.sound.music.volume = 0;
+			}
+			else MusicBeatState.switchState(new MainMenuState());
+		});
+		add(backTouch);
 		#end
 		
 		super.create();
@@ -154,10 +170,6 @@ class OptionsState extends MusicBeatState
 		controls.isInSubstate = false;
 		persistentUpdate = funnyCam.visible = true;
 		
-		#if TOUCH_CONTROLS_ALLOWED
-		removeTouchPad();
-		addTouchPad('UP_DOWN', 'A_B');
-		#end
 	}
 
 	override function update(elapsed:Float) {
