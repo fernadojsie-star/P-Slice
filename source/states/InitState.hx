@@ -55,11 +55,15 @@ class InitState extends MusicBeatState
 		Language.reloadPhrases();
 
 		trace("Setting some save related values");
+		// Browsers only allow fullscreen from a user gesture. Forcing it at boot just fails (or leaves the
+		// canvas half resized), which is one of the things that broke the layout on the web build.
+		#if !html5
 		if (FlxG.save.data != null && FlxG.save.data.fullscreen)
 		{
 			FlxG.fullscreen = FlxG.save.data.fullscreen;
 			// trace('LOADED FULLSCREEN SETTING!!');
 		}
+		#end
 		if (FlxG.save.data.weekCompleted != null)
 		{
 			StoryMenuState.weekCompleted = FlxG.save.data.weekCompleted;
