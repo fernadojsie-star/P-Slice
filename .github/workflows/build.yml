@@ -84,44 +84,70 @@ jobs:
       - name: Remove Firebase from Lime Android template
         if: inputs.exportPath == 'android'
         run: |
-          FILE=".haxelib/lime/git/templates/android/template/app/build.gradle"
-
-          if [ ! -f "$FILE" ]; then
-            echo "ERROR: Lime Android build.gradle template not found"
-            exit 1
-          fi
-
           python3 - <<'PY'
           import re
           from pathlib import Path
 
-          path = Path(".haxelib/lime/git/templates/android/template/app/build.gradle")
-          text = path.read_text()
+          root = Path(".haxelib/lime/git/templates/android/template")
 
-          text = re.sub(
-              r"(?m)^[ \t]*apply plugin: ['\"]com\.google\.firebase\.crashlytics['\"][ \t]*\n?",
-              "",
-              text
-          )
+          if not root.exists():
+              raise SystemExit("ERROR: Lime Android template not found.")
 
-          text = re.sub(
-              r"(?ms)^[ \t]*firebaseCrashlytics\s*\{.*?^[ \t]*\}[ \t]*\n?",
-              "",
-              text
-          )
+          plugins = [
+              "com.google.firebase.crashlytics",
+              "com.google.gms.google-services",
+          ]
 
-          path.write_text(text)
+          extensions = {".gradle", ".gradle.kts", ".kts", ".template"}
 
-          print("Firebase Crashlytics configuration removed.")
+          for path in root.rglob("*"):
+              if not path.is_file():
+                  continue
+
+              if not any(str(path).endswith(ext) for ext in extensions):
+                  continue
+
+              try:
+                  text = path.read_text()
+              except (UnicodeDecodeError, OSError):
+                  continue
+
+              original = text
+
+              for plugin in plugins:
+                  escaped = re.escape(plugin)
+
+                  patterns = [
+                      rf"(?m)^[ \t]*apply\s+plugin\s*:\s*['\"]{escaped}['\"][^\n]*\n?",
+                      rf"(?m)^[ \t]*id\s*\(?\s*['\"]{escaped}['\"][^\n]*\n?",
+                      rf"(?m)^[ \t]*apply\s*\(\s*plugin\s*=\s*['\"]{escaped}['\"][^\n]*\n?",
+                  ]
+
+                  for pattern in patterns:
+                      text = re.sub(pattern, "", text)
+
+              text = re.sub(
+                  r"(?ms)^[ \t]*firebaseCrashlytics\s*\{.*?^[ \t]*\}[ \t]*\n?",
+                  "",
+                  text
+              )
+
+              if text != original:
+                  path.write_text(text)
+                  print("Modified:", path)
+
+          print("Firebase configuration cleanup completed.")
           PY
 
-          echo "=== Checking Firebase references ==="
+          echo "=== Checking remaining Firebase plugin applications ==="
 
-          if grep -n -E 'firebaseCrashlytics|com.google.firebase.crashlytics' "$FILE"; then
-            echo "ERROR: Firebase references still exist."
+          if grep -RInE \
+            'apply plugin:.*(crashlytics|google-services)|id[ (]+["'\'']com\.google\.(firebase\.crashlytics|gms\.google-services)' \
+            .haxelib/lime/git/templates/android/template; then
+            echo "ERROR: Firebase plugin application still found."
             exit 1
           else
-            echo "No Firebase Crashlytics references found."
+            echo "No Firebase plugin applications found."
           fi
 
       - name: Compile
