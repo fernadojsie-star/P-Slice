@@ -5,49 +5,37 @@ import options.OptionsState;
 import flixel.FlxBasic;
 import flixel.effects.FlxFlicker;
 import mikolka.vslice.ui.title.TitleState;
-#if !LEGACY_PSYCH
-#if MODS_ALLOWED
-import states.ModsMenuState;
-#end
-import states.AchievementsMenuState;
-import states.CreditsState;
-import states.editors.MasterEditorMenu;
-#else
-import editors.MasterEditorMenu;
-#end
 import mikolka.compatibility.VsliceOptions;
 import flixel.FlxObject;
 
 @:access(mikolka.vslice.ui.MainMenuState)
 class DesktopMenuState extends FlxBasic
 {
+	// V-Slice 0.8.6 desktop order: Story Mode, Freeplay, Options, Credits.
 	var optionShit:Array<String> = [
 		'story_mode',
 		'freeplay',
-		#if MODS_ALLOWED 'mods', #end
-		#if ACHIEVEMENTS_ALLOWED 'awards', #end
-		'credits',
-		#if !switch 'donate', #end
-		'options'
+		'options',
+		'credits'
 	];
 
 	public static var curSelected:Int = 0;
-    var selectedSomethin:Bool = false;
+	var selectedSomethin:Bool = false;
 	var menuItems:FlxTypedGroup<FlxSprite>;
 	var camFollow:FlxObject;
-    
-    var host:MainMenuState;
-    public function new(host:MainMenuState) {
-        super();
-        this.host = host;
-        host.add(this);
+	var host:MainMenuState;
 
-		var yScroll:Float = Math.max(0.25 - (0.05 * (optionShit.length - 4)), 0.1);
-		host.bg.scrollFactor.set(0, yScroll);
+	public function new(host:MainMenuState)
+	{
+		super();
+		this.host = host;
+		host.add(this);
+
+		// V-Slice 0.8.6 uses a fixed 160px vertical rhythm.
+		host.bg.scrollFactor.set(0, 0.17);
 		host.bg.updateHitbox();
 		host.bg.screenCenter();
-
-        host.magenta.scrollFactor.set(0, yScroll);
+		host.magenta.scrollFactor.set(0, 0.17);
 		host.magenta.updateHitbox();
 		host.magenta.screenCenter();
 
@@ -57,42 +45,37 @@ class DesktopMenuState extends FlxBasic
 		menuItems = new FlxTypedGroup<FlxSprite>();
 		host.add(menuItems);
 
+		final spacing:Float = 160;
+		final top:Float = (FlxG.height - (spacing * (menuItems.length + optionShit.length - 1))) / 2;
+
 		for (i in 0...optionShit.length)
 		{
-			var offset:Float = 108 - (Math.max(optionShit.length, 4) - 4) * 80;
-			var menuItem:FlxSprite = new FlxSprite(0, (i * 140) + offset);
+			var menuItem:FlxSprite = new FlxSprite(0, top + (i * spacing));
 			menuItem.antialiasing = VsliceOptions.ANTIALIASING;
 			menuItem.frames = Paths.getSparrowAtlas('mainmenu/menu_' + optionShit[i]);
 			menuItem.animation.addByPrefix('idle', optionShit[i] + " basic", 24);
 			menuItem.animation.addByPrefix('selected', optionShit[i] + " white", 24);
 			menuItem.animation.play('idle');
-			menuItems.add(menuItem);
-			var scr:Float = (optionShit.length - 4) * 0.135;
-			if (optionShit.length < 6)
-				scr = 0;
-			menuItem.scrollFactor.set(0, scr);
+			menuItem.scrollFactor.set(0, 0.4);
 			menuItem.updateHitbox();
 			menuItem.screenCenter(X);
+			menuItems.add(menuItem);
 		}
 
 		FlxG.camera.follow(camFollow, null, 0.06);
-        changeItem();
+		changeItem();
 
 		#if TOUCH_CONTROLS_ALLOWED
 		host.addTouchPad('UP_DOWN', 'A_B');
 		#end
-    }
-
+	}
 
 	override function update(elapsed:Float)
 	{
 		if (!selectedSomethin)
 		{
-			if (host.controls.UI_UP_P)
-				changeItem(-1);
-
-			if (host.controls.UI_DOWN_P)
-				changeItem(1);
+			if (host.controls.UI_UP_P) changeItem(-1);
+			if (host.controls.UI_DOWN_P) changeItem(1);
 
 			if (host.controls.BACK)
 			{
@@ -106,78 +89,58 @@ class DesktopMenuState extends FlxBasic
 				FlxG.sound.play(Paths.sound('confirmMenu'));
 				FlxTransitionableState.skipNextTransIn = false;
 				FlxTransitionableState.skipNextTransOut = false;
-				if (optionShit[curSelected] == 'donate')
-				{
-					CoolUtil.browserLoad('https://needlejuicerecords.com/pages/friday-night-funkin');
-				}
-				else
-				{
-					selectedSomethin = true;
+				selectedSomethin = true;
 
-					if (VsliceOptions.FLASHBANG)
-						FlxFlicker.flicker(host.magenta, 1.1, 0.15, false);
+				if (VsliceOptions.FLASHBANG)
+					FlxFlicker.flicker(host.magenta, 1.1, 0.15, false);
 
-					FlxFlicker.flicker(menuItems.members[curSelected], 1, 0.06, false, false, function(flick:FlxFlicker)
+				FlxFlicker.flicker(menuItems.members[curSelected], 1, 0.06, false, false,
+					function(flick:FlxFlicker)
 					{
 						switch (optionShit[curSelected])
 						{
 							case 'story_mode':
 								MusicBeatState.switchState(new StoryMenuState());
 							case 'freeplay':
+							{
+								host.persistentDraw = true;
+								host.persistentUpdate = false;
+								FlxTransitionableState.skipNextTransIn = true;
+								FlxTransitionableState.skipNextTransOut = true;
+								host.openSubState(new FreeplayState());
+								host.subStateOpened.addOnce(state ->
 								{
-									host.persistentDraw = true;
-									host.persistentUpdate = false;
-									// Freeplay has its own custom transition
-									FlxTransitionableState.skipNextTransIn = true;
-									FlxTransitionableState.skipNextTransOut = true;
-
-									host.openSubState(new FreeplayState());
-									host.subStateOpened.addOnce(state ->
+									for (item in menuItems.members)
 									{
-										for (i in 0...menuItems.members.length)
-										{
-											menuItems.members[i].revive();
-											menuItems.members[i].alpha = 1;
-											menuItems.members[i].visible = true;
-											selectedSomethin = false;
-										}
-										changeItem(0);
-									});
-								}
-
-							#if MODS_ALLOWED
-							case 'mods':
-								MusicBeatState.switchState(new ModsMenuState());
-							#end
-
-							#if ACHIEVEMENTS_ALLOWED
-							case 'awards':
-								MusicBeatState.switchState(new AchievementsMenuState());
-							#end
-
-							case 'credits':
-								MusicBeatState.switchState(new CreditsState());
+										item.revive();
+										item.alpha = 1;
+										item.visible = true;
+									}
+									selectedSomethin = false;
+									changeItem(0);
+								});
+							}
 							case 'options':
 								host.goToOptions();
+							case 'credits':
+								MusicBeatState.switchState(new CreditsState());
 						}
 					});
 
-					for (i in 0...menuItems.members.length)
-					{
-						if (i == curSelected)
-							continue;
-						FlxTween.tween(menuItems.members[i], {alpha: 0}, 0.4, {
-							ease: FlxEase.quadOut,
-							onComplete: function(twn:FlxTween)
-							{
-								menuItems.members[i].kill();
-							}
-						});
-					}
+				for (i in 0...menuItems.members.length)
+				{
+					if (i == curSelected) continue;
+					FlxTween.tween(menuItems.members[i], {alpha: 0}, 0.4, {
+						ease: FlxEase.quadOut,
+						onComplete: function(twn:FlxTween)
+						{
+							menuItems.members[i].kill();
+						}
+					});
 				}
 			}
-			if (#if LEGACY_PSYCH FlxG.keys.anyJustPressed(ClientPrefs.keyBinds.get('debug_1')
-				.filter(s -> s != -1)) #else host.controls.justPressed('debug_1') #end)
+
+			if (#if LEGACY_PSYCH FlxG.keys.anyJustPressed(ClientPrefs.keyBinds.get('debug_1').filter(s -> s != -1)) #else host.controls.justPressed('debug_1') #end)
 			{
 				selectedSomethin = true;
 				FlxTransitionableState.skipNextTransIn = false;
@@ -185,30 +148,27 @@ class DesktopMenuState extends FlxBasic
 				MusicBeatState.switchState(new MasterEditorMenu());
 			}
 		}
-
 		super.update(elapsed);
 	}
 
 	function changeItem(huh:Int = 0)
 	{
-		if (huh != 0)
-			FlxG.sound.play(Paths.sound('scrollMenu'));
+		if (menuItems.length == 0) return;
+		if (huh != 0) FlxG.sound.play(Paths.sound('scrollMenu'));
+
 		menuItems.members[curSelected].animation.play('idle');
 		menuItems.members[curSelected].updateHitbox();
 		menuItems.members[curSelected].screenCenter(X);
 
 		curSelected += huh;
-
-		if (curSelected >= menuItems.length)
-			curSelected = 0;
-		if (curSelected < 0)
-			curSelected = menuItems.length - 1;
+		if (curSelected >= menuItems.length) curSelected = 0;
+		if (curSelected < 0) curSelected = menuItems.length - 1;
 
 		menuItems.members[curSelected].animation.play('selected');
 		menuItems.members[curSelected].centerOffsets();
 		menuItems.members[curSelected].screenCenter(X);
 
 		camFollow.setPosition(menuItems.members[curSelected].getGraphicMidpoint().x,
-			menuItems.members[curSelected].getGraphicMidpoint().y - (menuItems.length > 4 ? menuItems.length * 8 : 0));
+			menuItems.members[curSelected].getGraphicMidpoint().y);
 	}
 }
