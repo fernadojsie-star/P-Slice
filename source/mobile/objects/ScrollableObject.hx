@@ -27,24 +27,15 @@ class ScrollableObject extends TouchZone {
         super.update(elapsed);
         var curDelta = getDeltaY();
         //MusicBea
-        if
-            #if mobile
-            (TouchUtil.justPressed && TouchUtil.overlaps(this))
-            #else 
-            (FlxG.mouse.justPressed && FlxG.mouse.overlaps(this,this.camera)) 
-            #end
+        if (pointerJustPressedOnThis())
         {
             isDragging = false;
             isTapping = true;
         }
-        else if( #if mobile TouchUtil.justReleased #else FlxG.mouse.justReleased #end) {
+        else if (pointerJustReleased()) {
             if(isTapping){
                 if(clickButton.camera == null || clickButton.camera.scroll != null){
-                    #if mobile
-                    if(getjustPressed()?.overlaps(clickButton,clickButton.camera) ?? false) onTap.dispatch();
-                    #else
-                    if(FlxG.mouse.overlaps(clickButton,clickButton.camera)) onTap.dispatch();
-                    #end
+                    if(TouchUtil.releasedOver(clickButton, clickButton.camera)) onTap.dispatch();
                 }
                 isTapping = false;
             }
@@ -58,7 +49,7 @@ class ScrollableObject extends TouchZone {
             
             partialScrollTracker = 0;
         }
-        else if(( #if mobile TouchUtil.pressed || #end FlxG.mouse.pressed) && (Math.abs(curDelta)) > 3)
+        else if(pointerPressed() && (Math.abs(curDelta)) > 3)
             {
                 if(isTapping){
                     isDragging = true;
@@ -81,6 +72,31 @@ class ScrollableObject extends TouchZone {
                 }
             }
     }
+
+    // Phones & browsers use touches (browsers also accept the mouse). Desktop builds use the mouse only.
+    private inline function pointerJustPressedOnThis():Bool {
+        #if (mobile || html5)
+        return TouchUtil.justPressed && TouchUtil.overlaps(this);
+        #else
+        return FlxG.mouse.justPressed && FlxG.mouse.overlaps(this,this.camera);
+        #end
+    }
+    private inline function pointerJustReleased():Bool {
+        #if (mobile || html5)
+        return TouchUtil.justReleased;
+        #else
+        return FlxG.mouse.justReleased;
+        #end
+    }
+    private inline function pointerPressed():Bool {
+        #if mobile
+        return TouchUtil.pressed || FlxG.mouse.pressed;
+        #elseif html5
+        return TouchUtil.pressed;
+        #else
+        return FlxG.mouse.pressed;
+        #end
+    }
     private function getjustPressed():FlxTouch
         {
             for (touch in FlxG.touches.list)
@@ -90,15 +106,22 @@ class ScrollableObject extends TouchZone {
             return null;
         }
     private function getDeltaY():Float {
-        #if mobile
-        if(FlxG.touches.getFirst() == null) return 0;
-        var delta = FlxG.touches.getFirst().viewY - lastYPos;
-        lastYPos = FlxG.touches.getFirst().viewY;
-        return delta;
+        #if (mobile || html5)
+        var first = FlxG.touches.getFirst();
+        if(first != null) {
+            var delta = first.viewY - lastYPos;
+            lastYPos = first.viewY;
+            return delta;
+        }
+        #if html5
+        // no finger down -> the player is using a mouse
+        return FlxG.mouse.deltaViewY;
+        #else
+        return 0;
+        #end
         #else
         return FlxG.mouse.deltaViewY;
         #end
     }
-    
 }
 #end
