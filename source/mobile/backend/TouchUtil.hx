@@ -8,6 +8,10 @@ import flixel.input.touch.FlxTouch;
 /**
  * ...
  * @author: Karim Akra
+ *
+ * On the browser build the player can use either a finger or a mouse (desktop browsers, or
+ * phones that deliver mouse events), so every query here also looks at the mouse when
+ * compiling for html5.
  */
 class TouchUtil
 {
@@ -19,25 +23,60 @@ class TouchUtil
 
 	public static function overlaps(object:FlxObject, ?camera:FlxCamera):Bool
 	{
+		if (object == null)
+			return false;
+
 		for (touch in FlxG.touches.list)
 			if (touch.overlaps(object, camera ?? object.camera))
 				return true;
+
+		#if html5
+		if (FlxG.mouse.overlaps(object, camera ?? object.camera))
+			return true;
+		#end
 
 		return false;
 	}
 
 	public static function overlapsComplex(object:FlxObject, ?camera:FlxCamera):Bool
 	{
-		if (camera == null)
-			for (camera in object.cameras)
-				for (touch in FlxG.touches.list)
-					@:privateAccess
-					if (object.overlapsPoint(touch.getWorldPosition(camera, object._point), true, camera))
-						return true;
-		else
-			@:privateAccess
-			if (object.overlapsPoint(touch.getWorldPosition(camera, object._point), true, camera))
+		if (object == null)
+			return false;
+
+		var cameras:Array<FlxCamera> = camera != null ? [camera] : object.cameras;
+
+		@:privateAccess
+		for (cam in cameras)
+		{
+			for (touch in FlxG.touches.list)
+				if (object.overlapsPoint(touch.getWorldPosition(cam, object._point), true, cam))
+					return true;
+
+			#if html5
+			if (object.overlapsPoint(FlxG.mouse.getWorldPosition(cam, object._point), true, cam))
 				return true;
+			#end
+		}
+
+		return false;
+	}
+
+	/**
+	 * True if the pointer that was just released (finger or mouse) is over `object`.
+	 */
+	public static function releasedOver(object:FlxObject, ?camera:FlxCamera):Bool
+	{
+		if (object == null)
+			return false;
+
+		for (touch in FlxG.touches.list)
+			if (touch.justReleased && touch.overlaps(object, camera ?? object.camera))
+				return true;
+
+		#if html5
+		if (FlxG.mouse.justReleased && FlxG.mouse.overlaps(object, camera ?? object.camera))
+			return true;
+		#end
 
 		return false;
 	}
@@ -49,6 +88,11 @@ class TouchUtil
 			if (touch.pressed)
 				return true;
 
+		#if html5
+		if (FlxG.mouse.pressed)
+			return true;
+		#end
+
 		return false;
 	}
 
@@ -58,6 +102,11 @@ class TouchUtil
 		for (touch in FlxG.touches.list)
 			if (touch.justPressed)
 				return true;
+
+		#if html5
+		if (FlxG.mouse.justPressed)
+			return true;
+		#end
 
 		return false;
 	}
@@ -69,6 +118,11 @@ class TouchUtil
 			if (touch.justReleased)
 				return true;
 
+		#if html5
+		if (FlxG.mouse.justReleased)
+			return true;
+		#end
+
 		return false;
 	}
 
@@ -78,6 +132,11 @@ class TouchUtil
 		for (touch in FlxG.touches.list)
 			if (touch.released)
 				return true;
+
+		#if html5
+		if (FlxG.mouse.released)
+			return true;
+		#end
 
 		return false;
 	}
