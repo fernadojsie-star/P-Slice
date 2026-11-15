@@ -1,10 +1,11 @@
+
 name: Build the game
 
 on:
   push:
     branches:
       - Master
-      - vslice
+      - Vslice
   workflow_dispatch:
 
 jobs:
@@ -90,7 +91,7 @@ jobs:
             buildArgs: "android"
             cacheLibrariesPath: P-Slice.1.0.mobile-cache-nofirebase
             artifactName: P-Slice.1.0.android
-            cachePath: P-Slice.1.0.build-android
+            cachePath: P-Slice.1.0.build-android-clean
             artifactPath: "export/release/android/bin/app/build/outputs/apk/release/*.apk"
 
           - name: iOS
