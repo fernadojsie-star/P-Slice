@@ -15,6 +15,7 @@ import states.InitState;
 	public var controlsAlpha:Float = 0.6;
 	public var screensaver:Bool = false;
 	public var wideScreen:Bool = false;
+	public var touchIndicator:Bool = true; // draws a ring under every finger / click
 	#if android
 	public var storageType:String = "EXTERNAL";
 	#end
