@@ -7,18 +7,12 @@ import flixel.effects.FlxFlicker;
 import mikolka.vslice.ui.title.TitleState;
 import mikolka.compatibility.VsliceOptions;
 import flixel.FlxObject;
+import states.CreditsState;
 
 @:access(mikolka.vslice.ui.MainMenuState)
 class DesktopMenuState extends FlxBasic
 {
-	// V-Slice 0.8.6 desktop order: Story Mode, Freeplay, Options, Credits.
-	var optionShit:Array<String> = [
-		'story_mode',
-		'freeplay',
-		'options',
-		'credits'
-	];
-
+	var optionShit:Array<String> = ['story_mode', 'freeplay', 'options', 'credits'];
 	public static var curSelected:Int = 0;
 	var selectedSomethin:Bool = false;
 	var menuItems:FlxTypedGroup<FlxSprite>;
@@ -31,7 +25,6 @@ class DesktopMenuState extends FlxBasic
 		this.host = host;
 		host.add(this);
 
-		// V-Slice 0.8.6 uses a fixed 160px vertical rhythm.
 		host.bg.scrollFactor.set(0, 0.17);
 		host.bg.updateHitbox();
 		host.bg.screenCenter();
@@ -41,20 +34,18 @@ class DesktopMenuState extends FlxBasic
 
 		camFollow = new FlxObject(0, 0, 1, 1);
 		host.add(camFollow);
-
 		menuItems = new FlxTypedGroup<FlxSprite>();
 		host.add(menuItems);
 
 		final spacing:Float = 160;
-		final top:Float = (FlxG.height - (spacing * (menuItems.length + optionShit.length - 1))) / 2;
-
+		final top:Float = (FlxG.height - (spacing * (optionShit.length - 1))) / 2;
 		for (i in 0...optionShit.length)
 		{
 			var menuItem:FlxSprite = new FlxSprite(0, top + (i * spacing));
 			menuItem.antialiasing = VsliceOptions.ANTIALIASING;
 			menuItem.frames = Paths.getSparrowAtlas('mainmenu/menu_' + optionShit[i]);
-			menuItem.animation.addByPrefix('idle', optionShit[i] + " basic", 24);
-			menuItem.animation.addByPrefix('selected', optionShit[i] + " white", 24);
+			menuItem.animation.addByPrefix('idle', optionShit[i] + ' basic', 24);
+			menuItem.animation.addByPrefix('selected', optionShit[i] + ' white', 24);
 			menuItem.animation.play('idle');
 			menuItem.scrollFactor.set(0, 0.4);
 			menuItem.updateHitbox();
@@ -65,9 +56,7 @@ class DesktopMenuState extends FlxBasic
 		FlxG.camera.follow(camFollow, null, 0.06);
 		changeItem();
 
-		#if TOUCH_CONTROLS_ALLOWED
-		host.addTouchPad('UP_DOWN', 'A_B');
-		#end
+		// No virtual D-pad/A/B buttons: the mobile menu handles direct touch.
 	}
 
 	override function update(elapsed:Float)
@@ -132,20 +121,9 @@ class DesktopMenuState extends FlxBasic
 					if (i == curSelected) continue;
 					FlxTween.tween(menuItems.members[i], {alpha: 0}, 0.4, {
 						ease: FlxEase.quadOut,
-						onComplete: function(twn:FlxTween)
-						{
-							menuItems.members[i].kill();
-						}
+						onComplete: function(twn:FlxTween) menuItems.members[i].kill()
 					});
 				}
-			}
-
-			if (#if LEGACY_PSYCH FlxG.keys.anyJustPressed(ClientPrefs.keyBinds.get('debug_1').filter(s -> s != -1)) #else host.controls.justPressed('debug_1') #end)
-			{
-				selectedSomethin = true;
-				FlxTransitionableState.skipNextTransIn = false;
-				FlxTransitionableState.skipNextTransOut = false;
-				MusicBeatState.switchState(new MasterEditorMenu());
 			}
 		}
 		super.update(elapsed);
@@ -167,7 +145,6 @@ class DesktopMenuState extends FlxBasic
 		menuItems.members[curSelected].animation.play('selected');
 		menuItems.members[curSelected].centerOffsets();
 		menuItems.members[curSelected].screenCenter(X);
-
 		camFollow.setPosition(menuItems.members[curSelected].getGraphicMidpoint().x,
 			menuItems.members[curSelected].getGraphicMidpoint().y);
 	}
