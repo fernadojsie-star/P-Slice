@@ -16,6 +16,7 @@ import states.InitState;
 	public var screensaver:Bool = false;
 	public var wideScreen:Bool = false;
 	public var touchIndicator:Bool = true; // draws a ring under every finger / click
+	public var menuControls:String = 'Touch'; // 'Touch' = tap/swipe + back button, 'Buttons' = on-screen buttons (menus only)
 	#if android
 	public var storageType:String = "EXTERNAL";
 	#end
