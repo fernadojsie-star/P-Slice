@@ -94,21 +94,19 @@ class MobileScaleMode extends BaseScaleMode
    */
   public static var hasFakeCutouts:Bool = false;
 
+  /**
+   * Wide Screen stretches `FlxG.width` to the window. Almost all menus, stages and mods place their
+   * objects for a 1280px wide screen starting at x = 0, so with a wider canvas they end up glued to
+   * the LEFT side instead of staying in the middle (characters, backgrounds, menus...).
+   *
+   * While this is `false` the game always keeps its 16:9 layout, scaled and CENTERED in the window.
+   * Whatever doesn't fill the window simply leaves an empty bar on each side, exactly like P-Slice does.
+   */
+  public static inline var WIDE_LAYOUT_SUPPORTED:Bool = false;
+
   private static var active:Bool;
   @:noCompletion
   private static var cutoutBitmaps:Array<Bitmap> = [null, null];
-
-  /**
-   * Logical size (`FlxG.width` / `FlxG.height`) the current state was built with.
-   *
-   * Sprites are positioned using `FlxG.width` when a state is created, so changing it while the state is
-   * alive (entering/leaving fullscreen, resizing the browser window, toggling Wide Screen) leaves characters,
-   * menus and cameras in the wrong place. While this is > 0 any resize only rescales and centers the game
-   * (letterbox) and the new size is applied on the next state switch instead.
-   */
-  private static var lockedWidth:Int = 0;
-  private static var lockedHeight:Int = 0;
-  private static var signalsHooked:Bool = false;
 
   /**
    * Constructor for `FullScreenScaleMode`.
@@ -120,15 +118,6 @@ class MobileScaleMode extends BaseScaleMode
     super();
 
     instance = this;
-    lockedWidth = 0;
-    lockedHeight = 0;
-
-    if (!signalsHooked)
-    {
-      signalsHooked = true;
-      FlxG.signals.preStateSwitch.add(onPreStateSwitch);
-      FlxG.signals.postStateSwitch.add(onPostStateSwitch);
-    }
 
     // Required so we can check on which axies is the game wide.
     if (FlxG.stage != null) updateGameSize(FlxG.stage.stageWidth, FlxG.stage.stageHeight);
@@ -143,16 +132,11 @@ class MobileScaleMode extends BaseScaleMode
    */
   override public function onMeasure(Width:Int, Height:Int):Void
   {
-    if (lockedWidth > 0)
-    {
-      measureLocked(Width, Height);
-      return;
-    }
-
     untyped FlxG.width = FlxG.initialWidth;
     untyped FlxG.height = FlxG.initialHeight;
 
     updateGameSize(Width, Height);
+    // Alignment must follow the CURRENT state, not the one from when the option was toggled
     horizontalAlign = active ? LEFT : CENTER;
     verticalAlign = active ? TOP : CENTER;
     updateDeviceSize(Width, Height);
@@ -164,66 +148,6 @@ class MobileScaleMode extends BaseScaleMode
     updateGamePosition();
 
     adjustGameSize();
-  }
-
-  /**
-   * Resize that keeps the logical size of the running state untouched.
-   * The game is scaled uniformly to fit the window and centered, so nothing moves relative to the rest.
-   * Cutout / notch values are intentionally left as they were when the state was created.
-   */
-  private function measureLocked(Width:Int, Height:Int):Void
-  {
-    untyped FlxG.width = lockedWidth;
-    untyped FlxG.height = lockedHeight;
-
-    gameRatio = FlxG.width / FlxG.height;
-    screenRatio = Width / Height;
-    ratioAxis = screenRatio < gameRatio ? FlxAxes.Y : FlxAxes.X;
-    active = false;
-
-    logicalSize.set(Width, Height);
-    if (ratioAxis == FlxAxes.Y)
-    {
-      gameSize.x = Width;
-      logicalSize.y = Math.ceil(gameSize.x / gameRatio);
-      gameSize.y = logicalSize.y;
-    }
-    else
-    {
-      gameSize.y = Height;
-      logicalSize.x = Math.ceil(gameSize.y * gameRatio);
-      gameSize.x = logicalSize.x;
-    }
-
-    updateDeviceSize(Width, Height);
-    horizontalAlign = CENTER;
-    verticalAlign = CENTER;
-    updateScaleOffset();
-    updateGamePosition();
-  }
-
-  /**
-   * A new state is about to be created: from now on it may use the real window size again.
-   */
-  private static function onPreStateSwitch():Void
-  {
-    if (instance == null || lockedWidth <= 0)
-      return;
-
-    lockedWidth = 0;
-    lockedHeight = 0;
-
-    instance.onMeasure(FlxG.stage.stageWidth, FlxG.stage.stageHeight);
-    FlxG.signals.gameResized.dispatch(FlxG.stage.stageWidth, FlxG.stage.stageHeight);
-  }
-
-  /**
-   * The new state has been built with the current logical size, so keep it until the next switch.
-   */
-  private static function onPostStateSwitch():Void
-  {
-    lockedWidth = FlxG.width;
-    lockedHeight = FlxG.height;
   }
 
   /**
@@ -340,7 +264,7 @@ class MobileScaleMode extends BaseScaleMode
     gameRatio = FlxG.width / FlxG.height;
     screenRatio = Width / Height;
     ratioAxis = screenRatio < gameRatio ? FlxAxes.Y : FlxAxes.X;
-    active = ratioAxis == X && enabled;
+    active = WIDE_LAYOUT_SUPPORTED && ratioAxis == X && enabled;
 
     logicalSize.set(Width, Height);
 
@@ -496,12 +420,12 @@ class MobileScaleMode extends BaseScaleMode
       && (AndroidVersion.SDK_INT  >= AndroidVersionCode.P
         || AndroidTools.isTablet()) #end)
     {
-      enabled = Value;
-      active = Value;
+      enabled = WIDE_LAYOUT_SUPPORTED && Value;
+      active = enabled;
     }
     else
     {
-      enabled = Value;
+      enabled = WIDE_LAYOUT_SUPPORTED && Value;
       active = false;
     }
 
