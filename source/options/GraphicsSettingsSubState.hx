@@ -49,7 +49,7 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		option = new Option('Wide Screen Mode',
-			'If checked, The game will stetch to fill your whole screen. Takes effect the next time you change menu/state. (WARNING: Can result in bad visuals & break some mods that resizes the game/cameras)',
+			'Currently disabled: the game always keeps its 16:9 layout centered, so characters, menus and backgrounds never shift to the left. Empty areas stay black on both sides.',
 			'wideScreen', BOOL);
 		option.onChange = () -> MobileScaleMode.enabled = ClientPrefs.data.wideScreen;
 		addOption(option);
