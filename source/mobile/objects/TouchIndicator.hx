@@ -1,10 +1,8 @@
+
 package mobile.objects;
 
 #if TOUCH_CONTROLS_ALLOWED
 import openfl.Lib;
-import openfl.Assets;
-import openfl.display.Bitmap;
-import openfl.display.BlendMode;
 import openfl.display.Shape;
 import openfl.display.Sprite;
 import openfl.events.Event;
@@ -16,7 +14,6 @@ class TouchIndicator extends Sprite
 	static inline var MOUSE_ID:Int = -1;
 	static inline var FADE_TIME:Float = 0.22;
 	static inline var POP_TIME:Float = 0.12;
-	static inline var VSLICE_BLUE:Int = 0x6666E1;
 
 	var marks:Map<Int, Mark> = new Map();
 	var lastTime:Int = 0;
@@ -52,7 +49,12 @@ class TouchIndicator extends Sprite
 		if (hasActiveTouch()) return;
 		press(MOUSE_ID, e.stageX, e.stageY);
 	}
-	function onMouseMove(e:MouseEvent):Void if (e.buttonDown) move(MOUSE_ID, e.stageX, e.stageY);
+
+	function onMouseMove(e:MouseEvent):Void
+	{
+		if (e.buttonDown) move(MOUSE_ID, e.stageX, e.stageY);
+	}
+
 	function onMouseUp(e:MouseEvent):Void release(MOUSE_ID);
 
 	function hasActiveTouch():Bool
@@ -65,13 +67,16 @@ class TouchIndicator extends Sprite
 	function press(id:Int, x:Float, y:Float):Void
 	{
 		if (!ClientPrefs.data.touchIndicator) return;
+
 		var mark = marks.get(id);
+
 		if (mark == null)
 		{
 			mark = new Mark();
 			marks.set(id, mark);
 			addChild(mark.display);
 		}
+
 		mark.held = true;
 		mark.age = 0;
 		mark.fade = 0;
@@ -85,6 +90,7 @@ class TouchIndicator extends Sprite
 	{
 		var mark = marks.get(id);
 		if (mark == null || !mark.held) return;
+
 		mark.display.x = x;
 		mark.display.y = y;
 	}
@@ -92,6 +98,7 @@ class TouchIndicator extends Sprite
 	function release(id:Int):Void
 	{
 		var mark = marks.get(id);
+
 		if (mark != null && mark.held)
 		{
 			mark.held = false;
@@ -104,6 +111,7 @@ class TouchIndicator extends Sprite
 		var now = Lib.getTimer();
 		var dt = (now - lastTime) / 1000;
 		lastTime = now;
+
 		var dead:Array<Int> = [];
 
 		for (id => mark in marks)
@@ -111,17 +119,22 @@ class TouchIndicator extends Sprite
 			if (mark.held)
 			{
 				mark.age += dt;
+
 				var t = Math.min(1, mark.age / POP_TIME);
 				var s = 0.6 + 0.4 * (1 - (1 - t) * (1 - t));
+
 				mark.display.scaleX = mark.display.scaleY = s;
 				mark.display.alpha = 1;
 			}
 			else
 			{
 				mark.fade += dt;
+
 				var t = Math.min(1, mark.fade / FADE_TIME);
+
 				mark.display.alpha = 1 - t;
 				mark.display.scaleX = mark.display.scaleY = 1 + 0.35 * t;
+
 				if (t >= 1) dead.push(id);
 			}
 		}
@@ -129,12 +142,16 @@ class TouchIndicator extends Sprite
 		for (id in dead)
 		{
 			var mark = marks.get(id);
-			if (mark != null && mark.display.parent != null) removeChild(mark.display);
+
+			if (mark != null && mark.display.parent != null)
+				removeChild(mark.display);
+
 			marks.remove(id);
 		}
 
 		if (!ClientPrefs.data.touchIndicator)
-			for (id => mark in marks) mark.held = false;
+			for (id => mark in marks)
+				mark.held = false;
 	}
 }
 
@@ -147,12 +164,15 @@ private class Mark
 
 	public function new()
 	{
+		display = new Sprite();
+
 		var circle = new Shape();
 		circle.graphics.beginFill(0x6666E1, 0.32);
 		circle.graphics.lineStyle(3, 0x6666E1, 0.95);
 		circle.graphics.drawCircle(0, 0, 30);
 		circle.graphics.endFill();
-		display = circle;
+
+		display.addChild(circle);
 		display.mouseEnabled = false;
 	}
 }
