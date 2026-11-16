@@ -34,11 +34,21 @@ class MobileOptionsSubState extends BaseOptionsMenu
 		option.decimals = 1;
 		option.onChange = () ->
 		{
-			touchPad.alpha = curOption.getValue();
+			if (touchPad != null)
+				touchPad.alpha = curOption.getValue();
 			ClientPrefs.toggleVolumeKeys();
 		};
 		addOption(option);
 		#end
+
+		option = new Option('Menu Controls',
+			'Touch: tap and swipe directly on menus and use the back button (V-Slice style).\nButtons: use the on-screen D-pad / A / B / C buttons.\nRe-enter the menu to apply it.',
+			'menuControls', STRING, ['Touch', 'Buttons']);
+		addOption(option);
+
+		option = new Option('Touch Indicator',
+			'If checked, a ring is shown under every finger (or mouse click) so you can see where you are touching.', 'touchIndicator', BOOL);
+		addOption(option);
 
 		#if mobile
 		option = new Option('Allow Phone Screensaver',
