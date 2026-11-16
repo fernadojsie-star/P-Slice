@@ -14,8 +14,12 @@ import states.ModsMenuState;
 #end
 import states.AchievementsMenuState;
 import states.CreditsState;
+import states.editors.MasterEditorMenu;
 #else
+import editors.MasterEditorMenu;
 #end
+
+import mobile.backend.MenuControls;
 
 @:access(mikolka.vslice.ui.MainMenuState)
 class MobileMenuState extends FlxBasic {
@@ -31,14 +35,6 @@ class MobileMenuState extends FlxBasic {
 		
         grid = new GridButtons((MobileScaleMode.gameCutoutSize.x/4)+30, 20, 2,Math.floor((MobileScaleMode.gameCutoutSize.x/4)+750));
 		host.add(grid);
-
-		var backButton = new mobile.objects.VSliceBackButton(35, 35, () ->
-		{
-			selectedSomethin = true;
-			FlxG.sound.play(Paths.sound('cancelMenu'));
-			MusicBeatState.switchState(new TitleState());
-		});
-		host.add(backButton);
 		grid.onItemSelect.add(s ->{
 			FlxG.sound.play(Paths.sound('confirmMenu'));
 				FlxTransitionableState.skipNextTransIn = false;
@@ -110,6 +106,22 @@ class MobileMenuState extends FlxBasic {
 		grid.addButton(optionsBtn,0);
 		optionsBtn.setPosition((MobileScaleMode.gameCutoutSize.x/4)+35, FlxG.height - 200);
 
+        #if TOUCH_CONTROLS_ALLOWED
+		if (MenuControls.touchMode)
+		{
+			// V-Slice style: tap the tiles directly and use a back button (bottom right)
+			var backButton = new mobile.objects.VSliceBackButton((FlxG.width - 200) - (MobileScaleMode.gameCutoutSize.x / 4), FlxG.height - 130, () ->
+			{
+				selectedSomethin = true;
+				FlxG.sound.play(Paths.sound('cancelMenu'));
+				MusicBeatState.switchState(new TitleState());
+			});
+			host.add(backButton);
+		}
+		else
+			host.addTouchPad('NONE', 'B_C');
+		#end
+
 		if(!host.controls.mobileC) {
 			FlxG.mouse.visible = true;
 			grid.selectButton();
@@ -143,7 +155,14 @@ class MobileMenuState extends FlxBasic {
 				selectedSomethin = true;
 				grid.confirmCurrentButton();
 			}
-
+			if (#if TOUCH_CONTROLS_ALLOWED (host.touchPad != null && host.touchPad.buttonC.justPressed) || #end#if LEGACY_PSYCH FlxG.keys.anyJustPressed(ClientPrefs.keyBinds.get('debug_1')
+				.filter(s -> s != -1)) #else controls.justPressed('debug_1') #end)
+			{
+				selectedSomethin = true;
+				FlxTransitionableState.skipNextTransIn = false;
+				FlxTransitionableState.skipNextTransOut = false;
+				MusicBeatState.switchState(new MasterEditorMenu());
+			}
 		}
         super.update(elapsed);
     }
