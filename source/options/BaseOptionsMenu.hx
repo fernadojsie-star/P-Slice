@@ -2,6 +2,7 @@ package options;
 
 import mikolka.funkin.custom.mobile.MobileScaleMode;
 import mobile.objects.TouchZone;
+import mobile.backend.MenuControls;
 import flixel.input.keyboard.FlxKey;
 import flixel.input.gamepad.FlxGamepad;
 import flixel.input.gamepad.FlxGamepadInputID;
@@ -80,15 +81,6 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		descText.borderSize = 2.4;
 		add(descText);
 
-		#if TOUCH_CONTROLS_ALLOWED
-		var backButton = new mobile.objects.VSliceBackButton(35, 35, () ->
-		{
-			close();
-			FlxG.sound.play(Paths.sound('cancelMenu'));
-		});
-		add(backButton);
-		#end
-
 		var cutoutSize = MobileScaleMode.gameCutoutSize.x / 2;
 		for (i in 0...optionsArray.length)
 		{
@@ -126,7 +118,11 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		reloadCheckboxes();
 
 		#if TOUCH_CONTROLS_ALLOWED
-		var button = new TouchZone(85, 300, 1070, 100, FlxColor.TRANSPARENT);
+		var touchMode = MenuControls.touchMode;
+		if (!touchMode)
+			addTouchPad('LEFT_FULL', 'A_B_C');
+
+		var button = new TouchZone(85, 300, 1070, 100, touchMode ? FlxColor.TRANSPARENT : FlxColor.PURPLE);
 
 		var scroll = new ScrollableObject(-0.008, 100, 0, FlxG.width - 200, FlxG.height, button);
 		scroll.onPartialScroll.add(delta -> changeSelection(delta, false));
@@ -139,13 +135,18 @@ class BaseOptionsMenu extends MusicBeatSubstate
 			onAcceptPress();
 		});
 		add(scroll);
+		add(button);
 
-		var backTouch = new mobile.objects.VSliceBackButton(35, FlxG.height - 155, () ->
+		if (touchMode)
 		{
-			FlxG.sound.play(Paths.sound('cancelMenu'));
-			close();
-		});
-		add(backTouch);
+			// V-Slice style back button
+			var backTouch = new mobile.objects.VSliceBackButton(35, FlxG.height - 155, () ->
+			{
+				FlxG.sound.play(Paths.sound('cancelMenu'));
+				close();
+			});
+			add(backTouch);
+		}
 		#end
 	}
 
@@ -289,7 +290,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 					}
 			}
 
-			if (controls.RESET)
+			if (controls.RESET #if TOUCH_CONTROLS_ALLOWED || (touchPad != null && touchPad.buttonC.justPressed) #end)
 			{
 				var leOption:Option = optionsArray[curSelected];
 				if (leOption.type != KEYBIND)
@@ -360,7 +361,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 
 	function bindingKeyUpdate(elapsed:Float)
 	{
-		if (FlxG.keys.pressed.ESCAPE || FlxG.gamepads.anyPressed(B))
+		if (#if TOUCH_CONTROLS_ALLOWED (touchPad != null && touchPad.buttonB.pressed) || #end FlxG.keys.pressed.ESCAPE || FlxG.gamepads.anyPressed(B))
 		{
 			holdingEsc += elapsed;
 			if (holdingEsc > 0.5)
@@ -369,7 +370,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 				closeBinding();
 			}
 		}
-		else if (FlxG.keys.pressed.BACKSPACE || FlxG.gamepads.anyPressed(BACK))
+		else if (#if TOUCH_CONTROLS_ALLOWED (touchPad != null && touchPad.buttonC.pressed) || #end FlxG.keys.pressed.BACKSPACE || FlxG.gamepads.anyPressed(BACK))
 		{
 			holdingEsc += elapsed;
 			if (holdingEsc > 0.5)
