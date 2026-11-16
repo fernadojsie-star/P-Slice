@@ -1,5 +1,7 @@
 package options;
 
+import mobile.backend.MenuControls;
+
 import mikolka.funkin.custom.mobile.MobileScaleMode;
 import mikolka.vslice.components.crash.UserErrorSubstate;
 import backend.StageData;
@@ -97,21 +99,6 @@ class OptionsState extends MusicBeatState
 		bg.screenCenter();
 		add(bg);
 
-		#if TOUCH_CONTROLS_ALLOWED
-		var backButton = new mobile.objects.VSliceBackButton(35, 35, () ->
-		{
-			if (onPlayState)
-			{
-				StageData.loadDirectory(PlayState.SONG);
-				LoadingState.loadAndSwitchState(new PlayState());
-				FlxG.sound.music.volume = 0;
-			}
-			else
-				MusicBeatState.switchState(new MainMenuState());
-		});
-		add(backButton);
-		#end
-
 		grpOptions = new FlxTypedGroup<Alphabet>();
 		add(grpOptions);
 
@@ -129,7 +116,11 @@ class OptionsState extends MusicBeatState
 		ClientPrefs.saveSettings();
 
 		#if TOUCH_CONTROLS_ALLOWED
-		var button = new TouchZone(90,270,FlxG.width,100,FlxColor.PURPLE);
+		var touchMode = MenuControls.touchMode;
+		if (!touchMode)
+			addTouchPad('UP_DOWN', 'A_B');
+
+		var button = new TouchZone(90,270,FlxG.width,100,touchMode ? FlxColor.TRANSPARENT : FlxColor.PURPLE);
 		
 		var scroll = new ScrollableObject(-0.01,100,0,FlxG.width-200,FlxG.height,button);
 		scroll.onPartialScroll.add(delta -> changeSelection(delta,false));
@@ -141,20 +132,26 @@ class OptionsState extends MusicBeatState
 			openSelectedSubstate(options[curSelected]);
 		});
 		add(scroll);
-
-		var backTouch = new mobile.objects.VSliceBackButton(35, FlxG.height - 155, () ->
+		add(button);
+		if (touchMode)
 		{
-			FlxG.sound.play(Paths.sound('cancelMenu'));
-			exiting = true;
-			if(onPlayState)
+			// V-Slice style back button
+			var backTouch = new mobile.objects.VSliceBackButton(35, FlxG.height - 155, () ->
 			{
-				StageData.loadDirectory(PlayState.SONG);
-				LoadingState.loadAndSwitchState(new PlayState());
-				FlxG.sound.music.volume = 0;
-			}
-			else MusicBeatState.switchState(new MainMenuState());
-		});
-		add(backTouch);
+				FlxG.sound.play(Paths.sound('cancelMenu'));
+				exiting = true;
+				if (onPlayState)
+				{
+					StageData.loadDirectory(PlayState.SONG);
+					LoadingState.loadAndSwitchState(new PlayState());
+					FlxG.sound.music.volume = 0;
+				}
+				else
+					MusicBeatState.switchState(new MainMenuState());
+			});
+			backTouch.cameras = [funnyCam];
+			add(backTouch);
+		}
 		#end
 		
 		super.create();
@@ -170,6 +167,11 @@ class OptionsState extends MusicBeatState
 		controls.isInSubstate = false;
 		persistentUpdate = funnyCam.visible = true;
 		
+		#if TOUCH_CONTROLS_ALLOWED
+		removeTouchPad();
+		if (!MenuControls.touchMode)
+			addTouchPad('UP_DOWN', 'A_B');
+		#end
 	}
 
 	override function update(elapsed:Float) {
